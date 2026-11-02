@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>سجل إنتاج دواجن التسمين</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+:root{--bg:#eef1e8;--ink:#1f2a24;--muted:#5d6b62;--card:#fbfcf8;--line:#cfd7c6;--brand:#2f5d46;--accent:#d9a21b;--danger:#b3402f}
+@media (prefers-color-scheme:dark){:root{--bg:#161c18;--ink:#e8eee6;--muted:#9aa89f;--card:#1f2822;--line:#33403a;--brand:#6fb28f;--accent:#e2b13c;--danger:#e0705f}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Tajawal,system-ui,sans-serif;line-height:1.6}
+header{background:var(--brand);color:#fff;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+header h1{font-size:1.15rem;margin:0}
+main{max-width:860px;margin:0 auto;padding:16px}
+nav{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+nav button{flex:1;min-width:110px;background:var(--card);color:var(--ink);border:1px solid var(--line);padding:10px;border-radius:8px;font:inherit;cursor:pointer}
+nav button.on{background:var(--accent);border-color:var(--accent);color:#1f2a24;font-weight:700}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:14px}
+.card h2{margin:0 0 12px;font-size:1.05rem}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+label{display:block;font-size:.88rem;color:var(--muted);margin-bottom:3px}
+input,select,textarea{width:100%;padding:9px;border:1px solid var(--line);border-radius:7px;background:var(--bg);color:var(--ink);font:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:1px}
+.btn{background:var(--brand);color:#fff;border:0;padding:10px 18px;border-radius:8px;font:inherit;font-weight:700;cursor:pointer;margin-top:12px}
+.btn.ghost{background:transparent;color:#fff;border:1px solid #ffffff88;margin:0;padding:6px 12px}
+.btn.del{background:var(--danger);padding:4px 10px;margin:0;font-size:.8rem}
+.scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th{color:var(--muted);font-weight:500}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:12px}
+.stat{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px}
+.stat b{display:block;font-size:1.3rem}
+.stat span{color:var(--muted);font-size:.85rem}
+#msg{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:8px;display:none;max-width:90%}
+#msg.err{background:var(--danger);color:#fff}
+.hide{display:none}
+.auth{max-width:380px;margin:40px auto}
+</style>
+</head>
+<body>
+<header><h1>سجل إنتاج دواجن التسمين</h1><button id="out" class="btn ghost hide">تسجيل الخروج</button></header>
+<main>
+<!-- تسجيل الدخول -->
+<section id="auth" class="card auth hide">
+  <h2>تسجيل الدخول</h2>
+  <label for="em">البريد الإلكتروني</label><input id="em" type="email" autocomplete="email">
+  <label for="pw" style="margin-top:8px">كلمة المرور</label><input id="pw" type="password" autocomplete="current-password">
+  <button class="btn" id="login">دخول</button>
+  <button class="btn" id="signup" style="background:var(--accent);color:#1f2a24">إنشاء حساب</button>
+</section>
+
+<!-- التطبيق -->
+<div id="app" class="hide">
+<nav>
+  <button data-t="entry" class="on">إدخال يومي</button>
+  <button data-t="log">السجل والملخص</button>
+  <button data-t="setup">المزارع والدفعات</button>
+</nav>
+
+<section id="entry" class="card">
+  <h2>بيانات اليوم</h2>
+  <div class="grid">
+    <div><label for="e_flock">الدفعة</label><select id="e_flock"></select></div>
+    <div><label for="e_date">التاريخ</label><input id="e_date" type="date"></div>
+    <div><label for="e_mort">النافق (عدد)</label><input id="e_mort" type="number" min="0" value="0"></div>
+    <div><label for="e_feed">العلف المستهلك (كجم)</label><input id="e_feed" type="number" min="0" step="0.01"></div>
+    <div><label for="e_water">الماء (لتر)</label><input id="e_water" type="number" min="0" step="0.01"></div>
+    <div><label for="e_wt">متوسط الوزن (جم)</label><input id="e_wt" type="number" min="0" step="0.01"></div>
+    <div><label for="e_temp">درجة الحرارة (°م)</label><input id="e_temp" type="number" step="0.1"></div>
+  </div>
+  <label for="e_notes" style="margin-top:10px">ملاحظات</label><textarea id="e_notes" rows="2"></textarea>
+  <button class="btn" id="save">حفظ السجل</button>
+</section>
+
+<section id="log" class="hide">
+  <div class="card"><label for="l_flock">الدفعة</label><select id="l_flock"></select></div>
+  <div class="stats" id="stats"></div>
+  <div class="card scroll"><table>
+    <thead><tr><th>التاريخ</th><th>العمر</th><th>النافق</th><th>التراكمي %</th><th>العلف</th><th>الماء</th><th>الوزن</th><th>°م</th><th></th></tr></thead>
+    <tbody id="rows"></tbody></table></div>
+</section>
+
+<section id="setup" class="hide">
+  <div class="card"><h2>مزرعة جديدة</h2>
+    <label for="f_name">اسم المزرعة</label><input id="f_name">
+    <button class="btn" id="addFarm">إضافة المزرعة</button></div>
+  <div class="card"><h2>دفعة جديدة</h2>
+    <div class="grid">
+      <div><label for="b_farm">المزرعة</label><select id="b_farm"></select></div>
+      <div><label for="b_name">اسم الدفعة</label><input id="b_name"></div>
+      <div><label for="b_date">تاريخ الاستلام</label><input id="b_date" type="date"></div>
+      <div><label for="b_count">عدد الكتاكيت</label><input id="b_count" type="number" min="1"></div>
+    </div>
+    <button class="btn" id="addFlock">إضافة الدفعة</button></div>
+</section>
+</div>
+</main>
+<div id="msg" role="status"></div>
+
+<script>
+// ===== ضع بيانات مشروعك من Supabase > Project Settings > API =====
+const SUPABASE_URL = "https://llbtgtnghnuggwxkproe.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_18aEF4ISuhVvozYnwqutUA_GFBFeoNh";
+// ===================================================================
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const $ = id => document.getElementById(id);
+let farms = [], flocks = [];
+
+function toast(t, err) {
+  const m = $("msg"); m.textContent = t; m.className = err ? "err" : "";
+  m.style.display = "block"; setTimeout(() => m.style.display = "none", 3500);
+}
+const today = () => new Date().toISOString().slice(0, 10);
+const num = v => v === "" ? null : Number(v);
+
+// ---- الدخول ----
+async function authAction(kind) {
+  const email = $("em").value.trim(), password = $("pw").value;
+  const { error } = kind === "login"
+    ? await sb.auth.signInWithPassword({ email, password })
+    : await sb.auth.signUp({ email, password });
+  if (error) return toast(error.message, true);
+  if (kind === "signup") toast("تم إنشاء الحساب. إن كان تأكيد البريد مفعّلاً فافتح رسالة التأكيد أولاً.");
+}
+$("login").onclick = () => authAction("login");
+$("signup").onclick = () => authAction("signup");
+$("out").onclick = () => sb.auth.signOut();
+
+sb.auth.onAuthStateChange((_e, session) => {
+  $("auth").classList.toggle("hide", !!session);
+  $("app").classList.toggle("hide", !session);
+  $("out").classList.toggle("hide", !session);
+  if (session) loadAll();
+});
+
+// ---- التبويبات ----
+document.querySelectorAll("nav button").forEach(b => b.onclick = () => {
+  document.querySelectorAll("nav button").forEach(x => x.classList.toggle("on", x === b));
+  ["entry", "log", "setup"].forEach(id => $(id).classList.toggle("hide", id !== b.dataset.t));
+  if (b.dataset.t === "log") loadLog();
+});
+
+// ---- تحميل البيانات ----
+async function loadAll() {
+  const f = await sb.from("farms").select("*").order("name");
+  const b = await sb.from("flocks").select("*").order("start_date", { ascending: false });
+  if (f.error || b.error) return toast((f.error || b.error).message, true);
+  farms = f.data; flocks = b.data;
+  $("b_farm").innerHTML = farms.map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join("");
+  const opts = flocks.map(x => `<option value="${x.id}">${esc(farmName(x.farm_id))} — ${esc(x.name)}</option>`).join("");
+  $("e_flock").innerHTML = opts; $("l_flock").innerHTML = opts;
+  if (!$("e_date").value) $("e_date").value = today();
+  if (!$("b_date").value) $("b_date").value = today();
+}
+const farmName = id => (farms.find(f => f.id === id) || {}).name || "";
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+// ---- المزارع والدفعات ----
+$("addFarm").onclick = async () => {
+  const name = $("f_name").value.trim();
+  if (!name) return toast("أدخل اسم المزرعة", true);
+  const { error } = await sb.from("farms").insert({ name });
+  if (error) return toast(error.message, true);
+  $("f_name").value = ""; toast("تمت إضافة المزرعة"); loadAll();
+};
+$("addFlock").onclick = async () => {
+  const row = { farm_id: $("b_farm").value, name: $("b_name").value.trim(), start_date: $("b_date").value, chick_count: num($("b_count").value) };
+  if (!row.farm_id || !row.name || !row.start_date || !row.chick_count) return toast("أكمل جميع حقول الدفعة", true);
+  const { error } = await sb.from("flocks").insert(row);
+  if (error) return toast(error.message, true);
+  $("b_name").value = ""; $("b_count").value = ""; toast("تمت إضافة الدفعة"); loadAll();
+};
+
+// ---- الإدخال اليومي ----
+$("save").onclick = async () => {
+  const row = {
+    flock_id: $("e_flock").value, rec_date: $("e_date").value,
+    mortality: num($("e_mort").value) || 0, feed_kg: num($("e_feed").value) || 0,
+    water_l: num($("e_water").value), avg_weight_g: num($("e_wt").value),
+    temp_c: num($("e_temp").value), notes: $("e_notes").value.trim() || null
+  };
+  if (!row.flock_id || !row.rec_date) return toast("اختر الدفعة والتاريخ", true);
+  const { error } = await sb.from("daily_records").upsert(row, { onConflict: "flock_id,rec_date" });
+  if (error) return toast(error.message, true);
+  toast("تم حفظ السجل");
+  ["e_mort", "e_feed", "e_water", "e_wt", "e_temp", "e_notes"].forEach(i => $(i).value = "");
+  $("e_mort").value = 0;
+};
+
+// ---- السجل والملخص ----
+$("l_flock").onchange = loadLog;
+async function loadLog() {
+  const id = $("l_flock").value; if (!id) return;
+  const flock = flocks.find(f => f.id === id);
+  const { data, error } = await sb.from("daily_records").select("*").eq("flock_id", id).order("rec_date");
+  if (error) return toast(error.message, true);
+  let cum = 0, feed = 0, lastW = null;
+  const start = new Date(flock.start_date);
+  $("rows").innerHTML = data.map(r => {
+    cum += r.mortality; feed += Number(r.feed_kg);
+    if (r.avg_weight_g) lastW = Number(r.avg_weight_g);
+    const age = Math.round((new Date(r.rec_date) - start) / 864e5) + 1;
+    return `<tr><td>${r.rec_date}</td><td>${age}</td><td>${r.mortality}</td>
+      <td>${(cum / flock.chick_count * 100).toFixed(2)}</td><td>${r.feed_kg}</td>
+      <td>${r.water_l ?? "-"}</td><td>${r.avg_weight_g ?? "-"}</td><td>${r.temp_c ?? "-"}</td>
+      <td><button class="btn del" data-id="${r.id}">حذف</button></td></tr>`;
+  }).join("") || `<tr><td colspan="9">لا توجد سجلات بعد. ابدأ من تبويب «إدخال يومي».</td></tr>`;
+  const live = flock.chick_count - cum;
+  const fcr = lastW && live ? (feed / (live * lastW / 1000)).toFixed(2) : "-";
+  $("stats").innerHTML = [
+    ["الطيور الحية", live], ["النافق التراكمي", (cum / flock.chick_count * 100).toFixed(2) + "%"],
+    ["إجمالي العلف (كجم)", feed.toFixed(1)], ["آخر وزن (جم)", lastW ?? "-"], ["معامل التحويل (تقريبي)", fcr]
+  ].map(([l, v]) => `<div class="stat"><b>${v}</b><span>${l}</span></div>`).join("");
+  document.querySelectorAll(".del").forEach(b => b.onclick = async () => {
+    if (!confirm("حذف هذا السجل؟")) return;
+    const { error } = await sb.from("daily_records").delete().eq("id", b.dataset.id);
+    if (error) return toast(error.message, true);
+    loadLog();
+  });
+}
+
+sb.auth.getSession().then(({ data }) => { if (!data.session) $("auth").classList.remove("hide"); });
+</script>
+</body>
+</html>
